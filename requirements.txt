@@ -1,0 +1,10 @@
+autoflake
+bcrypt
+mypy
+isort
+black
+rich
+attrs
+markdown
+loguru
+jsonschema
