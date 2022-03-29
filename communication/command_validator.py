@@ -3,7 +3,7 @@ import copy
 import jsonschema
 
 MASTER_CMD_NAMES = ["connect", "disconnect", "finished"]
-WORKER_CMD_NAMES = ["map", "reduce", "terminate", "test"]
+WORKER_CMD_NAMES = ["map", "reduce", "terminate", "ping"]
 
 CMD_SCHEMA = {
     "type": "object",
@@ -20,7 +20,7 @@ class CommandValidator:
     @staticmethod
     def get_full_schema(possible_commands: list[str]):
         schema = copy.deepcopy(CMD_SCHEMA)
-        schema["properties"]["name"]["enum"] = possible_commands
+        schema["properties"]["name"]["enum"] = possible_commands  # type: ignore
         return schema
 
     @staticmethod

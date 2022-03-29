@@ -7,7 +7,7 @@ lint:
 	python -m mypy $(APP_PATH) --ignore-missing-imports
 
 master:
-	python ./communication/master.py
+	python ./communication/master_node.py
 
 worker:
-	python ./communication/worker.py
+	python ./communication/worker_node.py
