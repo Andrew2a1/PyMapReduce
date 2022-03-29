@@ -15,7 +15,9 @@ class Communicator:
     target_port: int
     timeout: int = DEFAULT_TIMEOUT
 
-    def communicate(self, command_name: str, command_data: dict[str, Any]) -> None:
+    def communicate(
+        self, command_name: str, command_data: dict[str, Any] = dict()
+    ) -> None:
         with socket.create_connection(
             (self.target_host, self.target_port), self.timeout
         ) as connection:
@@ -35,7 +37,7 @@ class Communicator:
 
     @property
     def target_string(self) -> str:
-        return f"host={self.target_host}, port={self.self_port}"
+        return f"host={self.target_host}, port={self.target_port}"
 
     @property
     def self_string(self) -> str:
