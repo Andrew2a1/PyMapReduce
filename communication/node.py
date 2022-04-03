@@ -21,7 +21,6 @@ class Node:
         self.exit_flag = threading.Event()
 
         self.commands: Queue[dict] = Queue()
-        self.workers: list[Worker] = []
 
     def main_loop(self):
         while not self.exit_flag.is_set():
