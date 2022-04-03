@@ -15,6 +15,20 @@ class Communicator:
     target_port: int
     timeout: int = DEFAULT_TIMEOUT
 
+    def __eq__(self, other) -> bool:
+        if type(other) is Communicator:
+            return (
+                self.target_host == other.target_host
+                and self.target_port == other.target_port
+            )
+        return super().__eq__(other)
+
+    def __hash__(self) -> int:
+        return hash(f"{self.target_host}:{self.target_port}")
+
+    def __str__(self) -> str:
+        return f"{self.target_host}:{self.target_port}"
+
     def communicate(
         self, command_name: str, command_data: dict[str, Any] = dict()
     ) -> None:

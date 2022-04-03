@@ -5,8 +5,6 @@ from command_validator import CommandValidator
 from master import Master
 from node import Node
 
-exit_flag: Optional[threading.Event] = None
-
 
 class WorkerNode(Node):
     def __init__(self, host: str, port: int) -> None:
@@ -30,12 +28,7 @@ class WorkerNode(Node):
         self.master.disconnect()
 
 
-def worker_thread():
-    global exit_flag
-
-    worker = WorkerNode("localhost", 0)
-    exit_flag = worker.exit_flag
-
+def run_worker_thread(worker: WorkerNode):
     worker.run_server()
     worker.wait_server_initialized()
 
@@ -50,14 +43,15 @@ def worker_thread():
 
 
 if __name__ == "__main__":
-    worker = threading.Thread(target=worker_thread)
-    worker.start()
+    worker = WorkerNode("localhost", 0)
+    worker_thread = threading.Thread(target=run_worker_thread, args=[worker])
+    worker_thread.start()
 
     while True:
         user_input = input(">> ")
 
         if user_input == "q":
-            exit_flag.set()  # type: ignore
+            worker.exit_flag.set()
             break
 
-    worker.join()
+    worker_thread.join()

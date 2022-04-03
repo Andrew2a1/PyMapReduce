@@ -71,8 +71,8 @@ class Node:
                 except ValueError:
                     logger.error(f"Received invalid data: {rawdata}")
 
-        logger.info("Starting server")
         with socketserver.TCPServer((self.host, self.port), NodeServer) as server:
+            logger.info("Server started")
             self.server = server
             self.server_created.set()
             server.serve_forever()
