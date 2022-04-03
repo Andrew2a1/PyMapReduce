@@ -16,7 +16,7 @@ class WorkerNode(Node):
 
     def set_master(self, host: str, port: int):
         if not self.server_created.is_set() or self.server is None:
-            raise Exception("Cannot set master while self server was not created")
+            raise Exception("Cannot set master when self server was not created")
 
         server_host, server_port = self.server.socket.getsockname()
         self.master = Master(server_host, server_port, host, port)

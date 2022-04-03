@@ -42,10 +42,10 @@ class Node:
         raise NotImplementedError()
 
     def __run_command(self, command: dict[str, Any]):
-        cmd_name: str = command["name"]
+        cmd_name: str = str(command["name"])
 
         try:
-            method_handle = getattr(self, f"{cmd_name}")
+            method_handle = getattr(self, cmd_name)
             method_handle(command)
         except AttributeError:
             logger.error(f"Command '{cmd_name}' not implemented")
