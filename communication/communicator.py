@@ -25,7 +25,7 @@ class Communicator:
         return super().__eq__(other)
 
     def __hash__(self) -> int:
-        return hash(f"{self.target_host}:{self.target_port}")
+        return hash((self.target_host, self.target_port))
 
     def __str__(self) -> str:
         return f"{self.target_host}:{self.target_port}"

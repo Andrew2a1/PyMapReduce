@@ -13,4 +13,4 @@ worker:
 	python ./communication/worker_node.py
 
 test:
-	python ./tests/map_task.py
+	python ./tests/map_task_test.py

@@ -1,11 +1,13 @@
 import threading
 from typing import Any, Optional
 
+from loguru import logger
+
 from command_validator import CommandValidator
 from event_handler import event_handler
 from master import Master
 from node import Node
-
+from mapreduce.map_task import MapTask
 
 class WorkerNode(Node):
     def __init__(self, host: str, port: int) -> None:
@@ -22,13 +24,25 @@ class WorkerNode(Node):
         server_host, server_port = self.server.socket.getsockname()
         self.master = Master(server_host, server_port, host, port)
 
-    @event_handler
     def connect_master(self):
         self.master.connect()
 
-    @event_handler
     def disconnect_master(self):
         self.master.disconnect()
+
+    @event_handler
+    def ping(self, command: dict[str, Any]):
+        pass
+
+    @event_handler
+    def map(self, command: dict[str, Any]):
+        input_file = command["data"]["filename"]
+
+        map_task = MapTask(command["data"]["map_function"])
+        map_task.call(input_file, "FILE_CONTENTS")
+
+        logger.debug(f"Map results: {map_task.results}")
+        self.master.task_done("map")
 
 
 def run_worker_thread(worker: WorkerNode):

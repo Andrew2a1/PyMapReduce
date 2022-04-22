@@ -1,6 +1,8 @@
 import threading
 from typing import Any, TextIO
 
+import loguru
+
 from command_validator import CommandValidator
 from event_handler import event_handler
 from loguru import logger
@@ -32,12 +34,27 @@ class MasterNode(Node):
                 logger.info(f"Removed: {worker.target_string}")
                 break
 
-    def map_reduce(self, input_data: TextIO, map_func: str):
+    @event_handler
+    def task_done(self, command: dict[str, Any]):
+        host, port = command["host"], command["port"]
         for worker in self.workers:
-            worker.map()
+            if worker.target_host == host and worker.target_port == port:
+                worker.task_done.set()
+
+    def map_reduce(self, map_func: str, input_file: str):
+        working_nodes: list[Worker] = []
 
         for worker in self.workers:
-            worker.task_done.wait()
+            worker.task_done.clear()
+            if worker.map(map_func, input_file) is True:
+                working_nodes.append(worker)
+            else:
+                worker.task_done.set()
+
+        for worker in working_nodes:
+            worker.task_done.wait(10)
+
+        logger.debug(f"Map done.")
 
 
 def run_master_thread(master: MasterNode):
@@ -61,5 +78,10 @@ if __name__ == "__main__":
 
         if user_input == "w":
             print(master.workers)
+
+        if user_input == "map":
+            function = input("function: ")
+            file = input("file: ")
+            master.map_reduce(function, file)
 
     master_thread.join()

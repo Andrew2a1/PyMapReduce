@@ -2,7 +2,7 @@ import copy
 
 import jsonschema
 
-MASTER_CMD_NAMES = ["connect", "disconnect", "finished"]
+MASTER_CMD_NAMES = ["connect", "disconnect", "finished", "task_done"]
 WORKER_CMD_NAMES = ["map", "reduce", "terminate", "ping"]
 
 CMD_SCHEMA = {

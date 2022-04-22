@@ -12,21 +12,10 @@ class Master(Communicator):
     timeout: int = DEFAULT_TIMEOUT
 
     def connect(self):
-        try:
-            logger.info(f"Sending CONNECT to {self.target_string}")
-            self.communicate("connect")
-        except (ConnectionError, ConnectionRefusedError):
-            logger.error(f"Rejected CONNECT to {self.target_string}")
-            return False
-
-        return True
+        return self.communicate("connect")
 
     def disconnect(self):
-        try:
-            logger.info(f"Sending DISCONNECT to {self.target_string}")
-            self.communicate("disconnect")
-        except (ConnectionError, ConnectionRefusedError):
-            logger.error(f"Rejected DISCONNECT to {self.target_string}")
-            return False
+        return self.communicate("disconnect")
 
-        return True
+    def task_done(self, name: str):
+        return self.communicate("task_done", {"name": name})

@@ -19,5 +19,5 @@ class Worker(Communicator):
     def terminate(self):
         return self.communicate("terminate")
 
-    def map(self, map_task, key: str, value: str):
-        map_task(key, value)
+    def map(self, map_function: str, filename: str):
+        return self.communicate("map", {"map_function": map_function, "filename": filename})
