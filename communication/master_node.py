@@ -2,6 +2,7 @@ import threading
 from typing import Any, TextIO
 
 from command_validator import CommandValidator
+from event_handler import event_handler
 from loguru import logger
 from node import Node
 from rich import print
@@ -16,11 +17,13 @@ class MasterNode(Node):
     def validate_command(self, command: dict[str, Any]) -> bool:
         return CommandValidator.validate_master(command)
 
+    @event_handler
     def connect(self, command: dict[str, Any]):
         worker = Worker(self.host, self.port, command["host"], command["port"])
         self.workers.append(worker)
         logger.info(f"Connected with: {worker.target_string}")
 
+    @event_handler
     def disconnect(self, command: dict[str, Any]):
         host, port = command["host"], command["port"]
         for worker in self.workers:

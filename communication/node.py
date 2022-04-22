@@ -2,12 +2,14 @@ import json
 import socketserver
 import threading
 from queue import Queue
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from loguru import logger
 
 
 class Node:
+    handlers: dict[str, Callable] = {}
+
     def __init__(self, host: str, port: int) -> None:
         self.host = host
         self.port = port
@@ -43,9 +45,8 @@ class Node:
         cmd_name: str = str(command["name"])
 
         try:
-            method_handle = getattr(self, cmd_name)
-            method_handle(command)
-        except AttributeError:
+            Node.handlers[cmd_name](self, command)
+        except KeyError:
             logger.error(f"Command '{cmd_name}' not implemented")
 
     def run_server(self):

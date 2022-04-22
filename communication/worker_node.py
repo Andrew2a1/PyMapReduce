@@ -2,6 +2,7 @@ import threading
 from typing import Any, Optional
 
 from command_validator import CommandValidator
+from event_handler import event_handler
 from master import Master
 from node import Node
 
@@ -21,9 +22,11 @@ class WorkerNode(Node):
         server_host, server_port = self.server.socket.getsockname()
         self.master = Master(server_host, server_port, host, port)
 
+    @event_handler
     def connect_master(self):
         self.master.connect()
 
+    @event_handler
     def disconnect_master(self):
         self.master.disconnect()
 
