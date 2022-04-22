@@ -3,6 +3,7 @@ import socket
 from typing import Any
 
 import attr
+from loguru import logger
 
 DEFAULT_TIMEOUT = 5
 
@@ -30,6 +31,17 @@ class Communicator:
         return f"{self.target_host}:{self.target_port}"
 
     def communicate(
+        self, command_name: str, command_data: dict[str, Any] = dict()
+    ) -> bool:
+        try:
+            logger.info(f"Sending {command_name} to {self.target_string}")
+            self.__communicate(command_name, command_data)
+        except (ConnectionError, ConnectionRefusedError):
+            logger.error(f"Rejected {command_name} to {self.target_string}")
+            return False
+        return True
+
+    def __communicate(
         self, command_name: str, command_data: dict[str, Any] = dict()
     ) -> None:
         with socket.create_connection(

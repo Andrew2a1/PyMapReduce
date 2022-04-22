@@ -4,5 +4,5 @@ setup(
     name="PyMapReduce",
     version="1.0",
     description="Python implementation of Google MapReduce Framework",
-    packages=["master", "worker"],
+    packages=["communication", "mapreduce", "tests"],
 )

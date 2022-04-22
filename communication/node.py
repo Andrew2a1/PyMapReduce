@@ -5,7 +5,6 @@ from queue import Queue
 from typing import Any, Optional
 
 from loguru import logger
-from worker import Worker
 
 
 class Node:

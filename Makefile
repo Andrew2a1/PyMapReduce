@@ -11,3 +11,6 @@ master:
 
 worker:
 	python ./communication/worker_node.py
+
+test:
+	python ./tests/map_task.py

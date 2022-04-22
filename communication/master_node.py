@@ -1,5 +1,5 @@
 import threading
-from typing import Any
+from typing import Any, TextIO
 
 from command_validator import CommandValidator
 from loguru import logger
@@ -29,11 +29,17 @@ class MasterNode(Node):
                 logger.info(f"Removed: {worker.target_string}")
                 break
 
+    def map_reduce(self, input_data: TextIO, map_func: str):
+        for worker in self.workers:
+            worker.map()
+
+        for worker in self.workers:
+            worker.task_done.wait()
+
 
 def run_master_thread(master: MasterNode):
     master.run_server()
     master.main_loop()
-
     master.shutdown_server()
     master.wait_finished()
 
