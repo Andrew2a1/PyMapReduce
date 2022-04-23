@@ -1,6 +1,5 @@
 import attr
 from communicator import DEFAULT_TIMEOUT, Communicator
-from loguru import logger
 
 
 @attr.s(auto_attribs=True)
@@ -17,5 +16,5 @@ class Master(Communicator):
     def disconnect(self):
         return self.communicate("disconnect")
 
-    def task_done(self, name: str):
-        return self.communicate("task_done", {"name": name})
+    def task_done(self, output: str):
+        return self.communicate("task_done", {"output": output})

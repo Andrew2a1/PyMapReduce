@@ -1,7 +1,5 @@
 import threading
-from typing import Any, TextIO
-
-import loguru
+from typing import Any
 
 from command_validator import CommandValidator
 from event_handler import event_handler
@@ -39,6 +37,7 @@ class MasterNode(Node):
         host, port = command["host"], command["port"]
         for worker in self.workers:
             if worker.target_host == host and worker.target_port == port:
+                worker.set_last_result(command["data"])
                 worker.task_done.set()
 
     def map_reduce(self, map_func: str, input_file: str):
@@ -52,7 +51,15 @@ class MasterNode(Node):
                 worker.task_done.set()
 
         for worker in working_nodes:
-            worker.task_done.wait(10)
+            is_done = worker.task_done.wait(10)
+
+            if is_done is False:
+                logger.error(f"Timeout waiting for worker: {worker}")
+                self.workers.remove(worker)
+                continue
+
+            result = worker.get_last_result()
+            logger.debug(f"Result: {result}")
 
         logger.debug(f"Map done.")
 
@@ -69,19 +76,22 @@ if __name__ == "__main__":
     master_thread = threading.Thread(target=run_master_thread, args=[master])
     master_thread.start()
 
-    while True:
-        user_input = input(">> ")
+    try:
+        while True:
+            user_input = input(">> ")
 
-        if user_input == "q":
-            master.exit_flag.set()
-            break
+            if user_input == "q":
+                master.exit_flag.set()
+                break
 
-        if user_input == "w":
-            print(master.workers)
+            if user_input == "w":
+                print(master.workers)
 
-        if user_input == "map":
-            function = input("function: ")
-            file = input("file: ")
-            master.map_reduce(function, file)
+            if user_input == "map":
+                function = input("function: ")
+                file = input("file: ")
+                master.map_reduce(function, file)
+    except KeyboardInterrupt:
+        master.exit_flag.set()
 
     master_thread.join()

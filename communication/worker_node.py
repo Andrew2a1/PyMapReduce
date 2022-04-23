@@ -1,13 +1,14 @@
 import threading
 from typing import Any, Optional
 
-from loguru import logger
-
 from command_validator import CommandValidator
 from event_handler import event_handler
+from loguru import logger
 from master import Master
 from node import Node
+
 from mapreduce.map_task import MapTask
+
 
 class WorkerNode(Node):
     def __init__(self, host: str, port: int) -> None:
@@ -36,13 +37,17 @@ class WorkerNode(Node):
 
     @event_handler
     def map(self, command: dict[str, Any]):
+        if self.master is None:
+            raise AttributeError("Master not set.")
+
         input_file = command["data"]["filename"]
 
         map_task = MapTask(command["data"]["map_function"])
-        map_task.call(input_file, "FILE_CONTENTS")
+        with open(input_file, 'r') as file:
+            map_task.call(input_file, file.read())
 
         logger.debug(f"Map results: {map_task.results}")
-        self.master.task_done("map")
+        self.master.task_done(f"{map_task.results}")
 
 
 def run_worker_thread(worker: WorkerNode):
@@ -64,11 +69,14 @@ if __name__ == "__main__":
     worker_thread = threading.Thread(target=run_worker_thread, args=[worker])
     worker_thread.start()
 
-    while True:
-        user_input = input(">> ")
+    try:
+        while True:
+            user_input = input(">> ")
 
-        if user_input == "q":
-            worker.exit_flag.set()
-            break
+            if user_input == "q":
+                worker.exit_flag.set()
+                break
+    except KeyboardInterrupt:
+        worker.exit_flag.set()
 
     worker_thread.join()
