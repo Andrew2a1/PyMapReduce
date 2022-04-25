@@ -57,7 +57,7 @@ class Node:
     def __run_server_thread(self):
         class NodeServer(socketserver.BaseRequestHandler):
             def handle(s):
-                s.data = s.request.recv(16*1024).strip()
+                s.data = s.request.recv(16 * 1024).strip()
                 s.store_command(s.data)
                 s.request.sendall(b"ACCEPT")
 

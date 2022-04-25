@@ -43,7 +43,7 @@ class WorkerNode(Node):
         input_file = command["data"]["filename"]
 
         map_task = MapTask(command["data"]["map_function"])
-        with open(input_file, 'r') as file:
+        with open(input_file, "r") as file:
             map_task.call(input_file, file.read())
 
         logger.debug(f"Map results: {map_task.results}")
