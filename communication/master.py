@@ -16,5 +16,5 @@ class Master(Communicator):
     def disconnect(self):
         return self.communicate("disconnect")
 
-    def task_done(self, output: str):
-        return self.communicate("task_done", {"output": output})
+    def task_done(self, output_file: str):
+        return self.communicate("task_done", {"output": output_file})

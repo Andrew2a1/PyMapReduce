@@ -8,6 +8,9 @@ from node import Node
 from rich import print
 from worker import Worker
 
+from mapreduce.function_loader import FunctionLoader
+from mapreduce.map_reduce import MapReduce
+
 
 class MasterNode(Node):
     def __init__(self, host: str, port: int) -> None:
@@ -40,28 +43,15 @@ class MasterNode(Node):
                 worker.set_last_result(command["data"])
                 worker.task_done.set()
 
-    def map_reduce(self, map_func: str, input_file: str):
-        working_nodes: list[Worker] = []
+    def map_reduce(self, input_file: str, map_fn_file: str, reduce_fn_file: str):
+        with open(map_fn_file, "r") as map_file:
+            map_function = FunctionLoader.from_file(map_file)
 
-        for worker in self.workers:
-            worker.task_done.clear()
-            if worker.map(map_func, input_file) is True:
-                working_nodes.append(worker)
-            else:
-                worker.task_done.set()
+        with open(reduce_fn_file, "r") as reduce_file:
+            reduce_function = FunctionLoader.from_file(reduce_file)
 
-        for worker in working_nodes:
-            is_done = worker.task_done.wait(10)
-
-            if is_done is False:
-                logger.error(f"Timeout waiting for worker: {worker}")
-                self.workers.remove(worker)
-                continue
-
-            result = worker.get_last_result()
-            logger.debug(f"Result: {result}")
-
-        logger.debug(f"Map done.")
+        mr = MapReduce(input_file, map_function, reduce_function)
+        mr.run(self.workers)
 
 
 def run_master_thread(master: MasterNode):
@@ -84,13 +74,21 @@ if __name__ == "__main__":
                 master.exit_flag.set()
                 break
 
-            if user_input == "w":
+            elif user_input == "w":
                 print(master.workers)
 
-            if user_input == "map":
-                function = input("function: ")
-                file = input("file: ")
-                master.map_reduce(function, file)
+            elif user_input == "map_reduce":
+                map_function_file = input("map function file: ")
+                reduce_function_file = input("reduce function file: ")
+                file = input("data file: ")
+                master.map_reduce(file, map_function_file, reduce_function_file)
+
+            elif user_input == "mr":
+                map_function_file = "./files/map.py"
+                reduce_function_file = "./files/reduce.py"
+                file = "./files/words.txt"
+                master.map_reduce(file, map_function_file, reduce_function_file)
+
     except KeyboardInterrupt:
         master.exit_flag.set()
 

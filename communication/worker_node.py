@@ -1,3 +1,5 @@
+import json
+import os
 import threading
 from typing import Any, Optional
 
@@ -8,6 +10,7 @@ from master import Master
 from node import Node
 
 from mapreduce.map_task import MapTask
+from mapreduce.reduce_task import ReduceTask
 
 
 class WorkerNode(Node):
@@ -40,14 +43,46 @@ class WorkerNode(Node):
         if self.master is None:
             raise AttributeError("Master not set.")
 
-        input_file = command["data"]["filename"]
+        function_str: str = command["data"]["map_function"]
+        input_file: str = command["data"]["filename"]
+        output_filename = (
+            f"{os.path.dirname(input_file)}/{command['name']}_{hash(self)}.txt"
+        )
 
-        map_task = MapTask(command["data"]["map_function"])
+        task = MapTask()
+        task.load_function(function_str)
+
         with open(input_file, "r") as file:
-            map_task.call(input_file, file.read())
+            task.execute(input_file, file.read())
 
-        logger.debug(f"Map results: {map_task.results}")
-        self.master.task_done(f"{map_task.results}")
+        task.store_results(output_filename)
+
+        logger.debug(f"Map results stored to file: {output_filename}")
+        self.master.task_done(output_filename)
+
+    @event_handler
+    def reduce(self, command: dict[str, Any]):
+        if self.master is None:
+            raise AttributeError("Master not set.")
+
+        function_str: str = command["data"]["reduce_function"]
+        input_file: str = command["data"]["filename"]
+        output_filename = (
+            f"{os.path.dirname(input_file)}/{command['name']}_{hash(self)}.txt"
+        )
+
+        task = ReduceTask()
+        task.load_function(function_str)
+
+        with open(input_file, "r") as file:
+            data = json.load(file)
+            for key, values in data.items():
+                task.execute(key, values)
+
+        task.store_results(output_filename)
+
+        logger.debug(f"Map results stored to file: {output_filename}")
+        self.master.task_done(output_filename)
 
 
 def run_worker_thread(worker: WorkerNode):

@@ -37,3 +37,8 @@ class Worker(Communicator):
         return self.communicate(
             "map", {"map_function": map_function, "filename": filename}
         )
+
+    def reduce(self, reduce_function: str, filename: str):
+        return self.communicate(
+            "reduce", {"reduce_function": reduce_function, "filename": filename}
+        )
