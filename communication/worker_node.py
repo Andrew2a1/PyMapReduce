@@ -45,9 +45,7 @@ class WorkerNode(Node):
 
         function_str: str = command["data"]["map_function"]
         input_file: str = command["data"]["filename"]
-        output_filename = (
-            f"{os.path.dirname(input_file)}/{command['name']}_{hash(self)}.txt"
-        )
+        output_filename = f"{os.path.dirname(input_file)}/{command['name']}_{os.path.basename(input_file)}"
 
         task = MapTask()
         task.load_function(function_str)
@@ -67,9 +65,7 @@ class WorkerNode(Node):
 
         function_str: str = command["data"]["reduce_function"]
         input_file: str = command["data"]["filename"]
-        output_filename = (
-            f"{os.path.dirname(input_file)}/{command['name']}_{hash(self)}.txt"
-        )
+        output_filename = f"{os.path.dirname(input_file)}/{command['name']}_{os.path.basename(input_file)}"
 
         task = ReduceTask()
         task.load_function(function_str)
