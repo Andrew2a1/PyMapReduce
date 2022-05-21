@@ -40,7 +40,7 @@ class MasterNode(Node):
         host, port = command["host"], command["port"]
         for worker in self.workers:
             if worker.target_host == host and worker.target_port == port:
-                worker.set_last_result(command["data"])
+                worker.put_last_result(command["data"])
                 worker.task_done.set()
 
     def map_reduce(self, input_file: str, map_fn_file: str, reduce_fn_file: str):

@@ -1,6 +1,7 @@
 APP_PATH = .
 
 lint:
+	pip install $(APP_PATH)
 	python -W ignore -m autoflake --in-place --recursive --ignore-init-module-imports --remove-duplicate-keys --remove-unused-variables --remove-all-unused-imports $(APP_PATH)
 	python -m black $(APP_PATH)
 	python -m isort $(APP_PATH)
