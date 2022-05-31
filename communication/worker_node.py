@@ -7,6 +7,7 @@ from command_validator import CommandValidator
 from event_handler import event_handler
 from loguru import logger
 from master import Master
+from master_node import MASTER_HOST, MASTER_PORT
 from node import Node
 
 from mapreduce.map_task import MapTask
@@ -45,7 +46,7 @@ class WorkerNode(Node):
 
         function_str: str = command["data"]["map_function"]
         input_file: str = command["data"]["filename"]
-        output_filename = f"{os.path.dirname(input_file)}/{command['name']}_{os.path.basename(input_file)}"
+        output_filename = self.__output_filename(input_file, command)
 
         task = MapTask()
         task.load_function(function_str)
@@ -65,7 +66,7 @@ class WorkerNode(Node):
 
         function_str: str = command["data"]["reduce_function"]
         input_file: str = command["data"]["filename"]
-        output_filename = f"{os.path.dirname(input_file)}/{command['name']}_{os.path.basename(input_file)}"
+        output_filename = self.__output_filename(input_file, command)
 
         task = ReduceTask()
         task.load_function(function_str)
@@ -80,12 +81,20 @@ class WorkerNode(Node):
         logger.debug(f"Map results stored to file: {output_filename}")
         self.master.task_done(output_filename)
 
+    def __output_filename(self, input_filename: str, command: dict[str, Any]) -> str:
+        node_name: str = ""
+        if self.master:
+            node_name = f"{self.master.self_host}_{self.master.self_port}"
+
+        filename = f"{command['name']}_{node_name}_{os.path.basename(input_filename)}"
+        return f"{os.path.dirname(input_filename)}/{filename}"
+
 
 def run_worker_thread(worker: WorkerNode):
     worker.run_server()
     worker.wait_server_initialized()
 
-    worker.set_master(host="localhost", port=9999)
+    worker.set_master(host=MASTER_HOST, port=MASTER_PORT)
     worker.connect_master()
 
     worker.main_loop()

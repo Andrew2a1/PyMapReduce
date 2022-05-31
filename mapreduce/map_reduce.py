@@ -2,6 +2,9 @@ import itertools
 import json
 import math
 import os
+from queue import Empty, Queue
+from threading import Thread
+from typing import Callable
 
 import attr
 from loguru import logger
@@ -15,6 +18,7 @@ class MapReduce:
     map_function: str
     reduce_function: str
     chunk_size: int = 8 * 1024
+    max_reduce_workers: int = 4
 
     def run(self, workers: list[Worker]):
         map_results = self.run_map(workers)
@@ -23,33 +27,82 @@ class MapReduce:
 
     def run_map(self, workers: list[Worker]) -> list[str]:
         chunk_files = self.__split_file(self.input_file, self.chunk_size)
-
-        results_files = []
-        sent_chunks = 0
-
-        while sent_chunks < len(chunk_files):
-            working_nodes: list[Worker] = []
-
-            for worker in workers:
-                worker.task_done.clear()
-                if worker.map(self.map_function, chunk_files[sent_chunks]) is True:
-                    working_nodes.append(worker)
-                    sent_chunks += 1
-
-            for worker in working_nodes:
-                is_done = worker.task_done.wait(10)
-
-                if is_done is False:
-                    logger.error(f"Timeout waiting for worker: {worker}")
-                    workers.remove(worker)
-                    continue
-
-                result = worker.get_last_result()
-                logger.debug(f"Result: {result}")
-                results_files.append(result["output"])
-
+        results: list[str] = self.__run_stage("map", workers, chunk_files)
         logger.info(f"Map done")
-        return results_files
+        return results
+
+    def run_reduce(
+        self, shuffle_results_filename: str, workers: list[Worker]
+    ) -> list[str]:
+        chunk_files = self.__split_shuffle(
+            shuffle_results_filename, min(len(workers), self.max_reduce_workers)
+        )
+        results: list[str] = self.__run_stage("reduce", workers, chunk_files)
+        logger.info(f"Reduce done")
+        return results
+
+    def __run_stage(
+        self, stage: str, workers: list[Worker], chunk_files: list[str]
+    ) -> list[str]:
+        if stage not in ["map", "reduce"]:
+            raise RuntimeError("Invalid stage: " + stage)
+
+        tasks: Queue[str] = Queue()
+        results_files: Queue[str] = Queue()
+
+        for file in chunk_files:
+            tasks.put_nowait(file)
+
+        worker_watchers: list[Thread] = []
+        for worker in workers:
+            stage_function: Callable = getattr(self, f"{stage}_function")
+            worker_function = lambda task: getattr(worker, stage)(stage_function, task)
+            watcher = Thread(
+                target=self.__process_tasks,
+                args=[worker, worker_function, tasks, results_files],
+            )
+            worker_watchers.append(watcher)
+            watcher.start()
+
+        for watcher in worker_watchers:
+            watcher.join()
+
+        results: list[str] = []
+        while not results_files.empty():
+            results.append(results_files.get_nowait())
+
+        return results
+
+    def __process_tasks(
+        self,
+        worker: Worker,
+        worker_function: Callable,
+        tasks: Queue[str],
+        results: Queue[str],
+    ):
+        fails = 0
+        while not tasks.empty() and fails < 3:
+            worker.task_done.clear()
+            try:
+                task = tasks.get(timeout=2)
+            except Empty:
+                return
+
+            if worker_function(task) is False:
+                tasks.put(task)
+                fails += 1
+                continue
+
+            is_done = worker.task_done.wait(worker.timeout)
+            if is_done is False:
+                tasks.put(task)
+                fails += 1
+                logger.error(f"Timeout waiting for worker: {worker}")
+                continue
+
+            result = worker.get_last_result()
+            logger.debug(f"Result: {result}")
+            results.put(result["output"])
 
     def __split_file(self, filename: str, chunk_size: int) -> list[str]:
         chunk_files: list[str] = []
@@ -85,37 +138,6 @@ class MapReduce:
             json.dump(shuffle_results, shuffle_results_file)
 
         return shuffle_results_filename
-
-    def run_reduce(
-        self, shuffle_results_filename: str, workers: list[Worker]
-    ) -> list[str]:
-        working_nodes: list[Worker] = []
-        chunk_files = iter(self.__split_shuffle(shuffle_results_filename, len(workers)))
-
-        for worker in workers:
-            worker.task_done.clear()
-
-        for worker in workers:
-            if worker.reduce(self.reduce_function, next(chunk_files)) is True:
-                working_nodes.append(worker)
-            else:
-                worker.task_done.set()
-
-        results_files = []
-        for worker in working_nodes:
-            is_done = worker.task_done.wait(10)
-
-            if is_done is False:
-                logger.error(f"Timeout waiting for worker: {worker}")
-                workers.remove(worker)
-                continue
-
-            result = worker.get_last_result()
-            logger.debug(f"Result: {result}")
-            results_files.append(result["output"])
-
-        logger.info(f"Reduce done")
-        return results_files
 
     def __split_shuffle(self, filename: str, split_count: int) -> list[str]:
         chunk_files: list[str] = []

@@ -11,6 +11,9 @@ from worker import Worker
 from mapreduce.function_loader import FunctionLoader
 from mapreduce.map_reduce import MapReduce
 
+MASTER_HOST = "localhost"
+MASTER_PORT = 9999
+
 
 class MasterNode(Node):
     def __init__(self, host: str, port: int) -> None:
@@ -62,7 +65,7 @@ def run_master_thread(master: MasterNode):
 
 
 if __name__ == "__main__":
-    master = MasterNode(host="localhost", port=9999)
+    master = MasterNode(host=MASTER_HOST, port=MASTER_PORT)
     master_thread = threading.Thread(target=run_master_thread, args=[master])
     master_thread.start()
 

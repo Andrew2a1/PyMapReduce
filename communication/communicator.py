@@ -5,7 +5,7 @@ from typing import Any
 import attr
 from loguru import logger
 
-DEFAULT_TIMEOUT = 5
+DEFAULT_TIMEOUT = 10
 
 
 @attr.s(auto_attribs=True)
