@@ -22,13 +22,17 @@ class MapReduce:
 
     def run(self, workers: list[Worker]):
         map_results = self.run_map(workers)
+        logger.info(f"Map done")
+
         shuffle_results_filename = self.shuffle(map_results)
+        logger.info(f"Shuffle done")
+
         self.run_reduce(shuffle_results_filename, workers)
+        logger.info(f"Reduce done")
 
     def run_map(self, workers: list[Worker]) -> list[str]:
         chunk_files = self.__split_file(self.input_file, self.chunk_size)
         results: list[str] = self.__run_stage("map", workers, chunk_files)
-        logger.info(f"Map done")
         return results
 
     def run_reduce(
@@ -38,8 +42,27 @@ class MapReduce:
             shuffle_results_filename, min(len(workers), self.max_reduce_workers)
         )
         results: list[str] = self.__run_stage("reduce", workers, chunk_files)
-        logger.info(f"Reduce done")
         return results
+
+    def shuffle(self, map_results_files: list[str]) -> str:
+        shuffle_results: dict[str, list[str]] = {}
+        for file in map_results_files:
+            with open(file, "r") as input:
+                data = json.load(input)
+
+            for k, v in data:
+                if k in shuffle_results:
+                    shuffle_results[k].append(v)
+                else:
+                    shuffle_results[k] = [v]
+
+        shuffle_results_filename = (
+            f"{os.path.dirname(map_results_files[0])}/shuffle_results.txt"
+        )
+        with open(shuffle_results_filename, "w") as shuffle_results_file:
+            json.dump(shuffle_results, shuffle_results_file)
+
+        return shuffle_results_filename
 
     def __run_stage(
         self, stage: str, workers: list[Worker], chunk_files: list[str]
@@ -55,8 +78,10 @@ class MapReduce:
 
         worker_watchers: list[Thread] = []
         for worker in workers:
-            stage_function: Callable = getattr(self, f"{stage}_function")
-            worker_function = lambda task: getattr(worker, stage)(stage_function, task)
+            stage_function: str = getattr(self, f"{stage}_function")
+            worker_function = lambda worker, task: getattr(worker, stage)(
+                stage_function, task
+            )
             watcher = Thread(
                 target=self.__process_tasks,
                 args=[worker, worker_function, tasks, results_files],
@@ -66,6 +91,9 @@ class MapReduce:
 
         for watcher in worker_watchers:
             watcher.join()
+
+        if not tasks.empty():
+            raise RuntimeError("Not all chunks were processed, aborting.")
 
         results: list[str] = []
         while not results_files.empty():
@@ -88,7 +116,7 @@ class MapReduce:
             except Empty:
                 return
 
-            if worker_function(task) is False:
+            if worker_function(worker, task) is False:
                 tasks.put(task)
                 fails += 1
                 continue
@@ -118,26 +146,6 @@ class MapReduce:
                     chunk_file.write(data)
 
         return chunk_files
-
-    def shuffle(self, map_results_files: list[str]) -> str:
-        shuffle_results: dict[str, list[str]] = {}
-        for file in map_results_files:
-            with open(file, "r") as input:
-                data = json.load(input)
-
-            for k, v in data:
-                if k in shuffle_results:
-                    shuffle_results[k].append(v)
-                else:
-                    shuffle_results[k] = [v]
-
-        shuffle_results_filename = (
-            f"{os.path.dirname(map_results_files[0])}/shuffle_results.txt"
-        )
-        with open(shuffle_results_filename, "w") as shuffle_results_file:
-            json.dump(shuffle_results, shuffle_results_file)
-
-        return shuffle_results_filename
 
     def __split_shuffle(self, filename: str, split_count: int) -> list[str]:
         chunk_files: list[str] = []
