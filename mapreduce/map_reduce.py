@@ -3,7 +3,7 @@ import json
 import math
 import os
 from queue import Empty, Queue
-from threading import Thread
+from threading import Semaphore
 from typing import Callable
 
 import attr
@@ -70,30 +70,37 @@ class MapReduce:
         if stage not in ["map", "reduce"]:
             raise RuntimeError("Invalid stage: " + stage)
 
-        tasks: Queue[str] = Queue()
+        tasks = chunk_files.copy()
         results_files: Queue[str] = Queue()
+        tasks_semaphore = Semaphore(len(workers))
 
-        for file in chunk_files:
-            tasks.put_nowait(file)
+        stage_function: str = getattr(self, f"{stage}_function")
+        worker_function = lambda worker, task: getattr(worker, stage)(
+            stage_function, task
+        )
 
-        worker_watchers: list[Thread] = []
+        while len(tasks) > 0:
+            # found_worker = tasks_semaphore.acquire(blocking=True, timeout=5)
+
+            # if not found_worker:
+            #     raise RuntimeError("Could not find any runner")
+
+            task = tasks.pop()
+            for worker in workers:
+                if worker.task_done.is_set():
+
+                    def task_done_callback():
+                        last_result = worker.get_last_result()["output"]
+                        results_files.put(last_result)
+                        tasks_semaphore.release()
+
+                    worker.task_done.clear()
+                    worker.task_done_callback = task_done_callback
+                    worker_function(worker, task)
+                    break
+
         for worker in workers:
-            stage_function: str = getattr(self, f"{stage}_function")
-            worker_function = lambda worker, task: getattr(worker, stage)(
-                stage_function, task
-            )
-            watcher = Thread(
-                target=self.__process_tasks,
-                args=[worker, worker_function, tasks, results_files],
-            )
-            worker_watchers.append(watcher)
-            watcher.start()
-
-        for watcher in worker_watchers:
-            watcher.join()
-
-        if not tasks.empty():
-            raise RuntimeError("Not all chunks were processed, aborting.")
+            worker.task_done.wait()
 
         results: list[str] = []
         while not results_files.empty():

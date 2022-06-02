@@ -1,6 +1,6 @@
 import threading
 from queue import Queue
-from typing import Any
+from typing import Any, Callable, Optional
 
 from communicator import DEFAULT_TIMEOUT, Communicator
 
@@ -16,7 +16,14 @@ class Worker(Communicator):
 
         self.timeout: int = DEFAULT_TIMEOUT
         self.task_done: threading.Event = threading.Event()
+        self.task_done_callback: Optional[Callable] = None
         self.last_results: Queue[dict[str, Any]] = Queue()
+
+    def set_task_done(self):
+        self.task_done.set()
+
+        if self.task_done_callback:
+            self.task_done_callback()
 
     def put_last_result(self, data: dict[str, Any]):
         self.last_results.put(data)

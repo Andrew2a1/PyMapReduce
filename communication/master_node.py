@@ -44,17 +44,20 @@ class MasterNode(Node):
         for worker in self.workers:
             if worker.target_host == host and worker.target_port == port:
                 worker.put_last_result(command["data"])
-                worker.task_done.set()
+                worker.set_task_done()
 
     def map_reduce(self, input_file: str, map_fn_file: str, reduce_fn_file: str):
-        with open(map_fn_file, "r") as map_file:
-            map_function = FunctionLoader.from_file(map_file)
+        try:
+            with open(map_fn_file, "r") as map_file:
+                map_function = FunctionLoader.from_file(map_file)
 
-        with open(reduce_fn_file, "r") as reduce_file:
-            reduce_function = FunctionLoader.from_file(reduce_file)
+            with open(reduce_fn_file, "r") as reduce_file:
+                reduce_function = FunctionLoader.from_file(reduce_file)
 
-        mr = MapReduce(input_file, map_function, reduce_function)
-        mr.run(self.workers)
+            mr = MapReduce(input_file, map_function, reduce_function)
+            mr.run(self.workers)
+        except Exception as e:
+            logger.error(f"Error: {e}")
 
 
 def run_master_thread(master: MasterNode):
