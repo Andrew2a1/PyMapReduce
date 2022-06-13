@@ -69,6 +69,12 @@ if __name__ == "__main__":
     master_thread = threading.Thread(target=run_master_thread, args=[master])
     master_thread.start()
 
+    print()
+    print("Master console, usage:")
+    print("w    Print list of all connected workers")
+    print("mr   Run map reduce from files: files/map.py, files/reduce.py on data: words.txt")
+    print()
+
     try:
         while True:
             user_input = input(">> ")

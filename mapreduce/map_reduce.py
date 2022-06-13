@@ -92,9 +92,6 @@ class MapReduce:
         for watcher in worker_watchers:
             watcher.join()
 
-        if not tasks.empty():
-            raise RuntimeError("Not all chunks were processed, aborting.")
-
         results: list[str] = []
         while not results_files.empty():
             results.append(results_files.get_nowait())
